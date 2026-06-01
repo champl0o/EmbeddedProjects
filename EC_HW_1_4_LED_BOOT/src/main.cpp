@@ -9,7 +9,8 @@ enum class BlinkMode
 {
   OFF,
   FAST,
-  SLOW
+  SLOW,
+  ALWAYS_ON,
 };
 
 BlinkMode blinkMode = BlinkMode::OFF;
@@ -19,7 +20,8 @@ unsigned long lastDebounce = 0;
 const unsigned long DEBOUNCE_MS = 30;
 
 unsigned long lastToggle = 0;
-bool phase = false;
+
+unsigned long delayMs = 0;
 
 // void setup()
 // {
@@ -31,21 +33,40 @@ bool phase = false;
 //   Serial.printf("Free PSRAM: %d\n", ESP.getFreePsram());
 // }
 
-void blinkLeds(int delayMs)
+void blinkLeds()
 {
-  if (delayMs == 0)
+  if (blinkMode == BlinkMode::OFF)
   {
     digitalWrite(BLUE_LED_PIN, LOW);
     digitalWrite(RED_LED_PIN, LOW);
     return;
   }
 
-  digitalWrite(BLUE_LED_PIN, HIGH);
-  digitalWrite(RED_LED_PIN, LOW);
-  delay(delayMs);
-  digitalWrite(BLUE_LED_PIN, LOW);
-  digitalWrite(RED_LED_PIN, HIGH);
-  delay(delayMs);
+  if (blinkMode == BlinkMode::ALWAYS_ON)
+  {
+    digitalWrite(BLUE_LED_PIN, HIGH);
+    digitalWrite(RED_LED_PIN, HIGH);
+    return;
+  }
+
+  if (blinkMode == BlinkMode::FAST || blinkMode == BlinkMode::SLOW)
+  {
+    if (blinkMode == BlinkMode::FAST)
+    {
+      delayMs = 100;
+    }
+    else if (blinkMode == BlinkMode::SLOW)
+    {
+      delayMs = 500;
+    }
+
+    digitalWrite(BLUE_LED_PIN, HIGH);
+    digitalWrite(RED_LED_PIN, LOW);
+    delay(delayMs);
+    digitalWrite(BLUE_LED_PIN, LOW);
+    digitalWrite(RED_LED_PIN, HIGH);
+    delay(delayMs);
+  }
 }
 
 void setup()
@@ -56,7 +77,7 @@ void setup()
   pinMode(BTN_PIN, INPUT_PULLUP);
   pinMode(BLUE_LED_PIN, OUTPUT);
   pinMode(RED_LED_PIN, OUTPUT);
-  pinMode(OUTER_BTN_PIN, INPUT_PULLUP);
+  pinMode(OUTER_BTN_PIN, INPUT); // 3-пінний модуль (active-HIGH), рівень задає сам модуль
 }
 
 void loop()
@@ -64,36 +85,37 @@ void loop()
   int btn = digitalRead(BTN_PIN);
   int outer = digitalRead(OUTER_BTN_PIN);
 
+  Serial.printf("BTN: %d, OUTER: %d\n", btn, outer);
+
+  bool btnPressed = (btn == LOW);    // BOOT: active-LOW
+  bool outerPressed = (outer == HIGH); // зовнішній модуль: active-HIGH
+
+  bool btnEdge = (lastBtn == HIGH && btn == LOW);     // BOOT щойно натиснута
+  bool outerEdge = (lastOuter == LOW && outer == HIGH); // outer щойно натиснута
+
   if (millis() - lastDebounce > DEBOUNCE_MS)
   {
-    if (lastBtn == HIGH && btn == LOW) // BOOT just pressed
+    if (btnPressed && outerPressed) // both buttons pressed
+    {
+      blinkMode = BlinkMode::ALWAYS_ON;
+      lastDebounce = millis();
+    }
+    else if (btnEdge) // BOOT just pressed
     {
       blinkMode = BlinkMode::SLOW;
       lastDebounce = millis();
     }
-    else if (lastOuter == HIGH && outer == LOW) // outer just pressed
+    else if (outerEdge) // outer just pressed
     {
       blinkMode = BlinkMode::FAST;
       lastDebounce = millis();
     }
   }
 
+  Serial.printf("Blink Mode: %d\n", static_cast<int>(blinkMode));
+
   lastBtn = btn;
   lastOuter = outer;
 
-  int delayMs = 0;
-  switch (blinkMode)
-  {
-  case BlinkMode::OFF:
-    delayMs = 0;
-    break;
-  case BlinkMode::FAST:
-    delayMs = 100;
-    break;
-  case BlinkMode::SLOW:
-    delayMs = 500;
-    break;
-  }
-
-  blinkLeds(delayMs);
+  blinkLeds();
 }
