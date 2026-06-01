@@ -77,7 +77,7 @@ void setup()
   pinMode(BTN_PIN, INPUT_PULLUP);
   pinMode(BLUE_LED_PIN, OUTPUT);
   pinMode(RED_LED_PIN, OUTPUT);
-  pinMode(OUTER_BTN_PIN, INPUT); // 3-пінний модуль (active-HIGH), рівень задає сам модуль
+  pinMode(OUTER_BTN_PIN, INPUT);
 }
 
 void loop()
@@ -87,25 +87,25 @@ void loop()
 
   Serial.printf("BTN: %d, OUTER: %d\n", btn, outer);
 
-  bool btnPressed = (btn == LOW);    // BOOT: active-LOW
-  bool outerPressed = (outer == HIGH); // зовнішній модуль: active-HIGH
+  bool btnPressed = (btn == LOW);
+  bool outerPressed = (outer == HIGH);
 
-  bool btnEdge = (lastBtn == HIGH && btn == LOW);     // BOOT щойно натиснута
-  bool outerEdge = (lastOuter == LOW && outer == HIGH); // outer щойно натиснута
+  bool btnEdge = (lastBtn == HIGH && btn == LOW);
+  bool outerEdge = (lastOuter == LOW && outer == HIGH);
 
   if (millis() - lastDebounce > DEBOUNCE_MS)
   {
-    if (btnPressed && outerPressed) // both buttons pressed
+    if (btnPressed && outerPressed)
     {
       blinkMode = BlinkMode::ALWAYS_ON;
       lastDebounce = millis();
     }
-    else if (btnEdge) // BOOT just pressed
+    else if (btnEdge)
     {
       blinkMode = BlinkMode::SLOW;
       lastDebounce = millis();
     }
-    else if (outerEdge) // outer just pressed
+    else if (outerEdge)
     {
       blinkMode = BlinkMode::FAST;
       lastDebounce = millis();
