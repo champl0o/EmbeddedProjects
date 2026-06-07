@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "config.h"
 #include "logger.h"
+#include "lcd.h"
 
 void blinkLED(int pin, int times, int delayMs);
 void handleButtonPress(int aPressedEdge, int bPressedEdge);
@@ -30,11 +31,15 @@ void setup()
   previousAButtonState = digitalRead(A_BUTTON_PIN);
   previousBButtonState = digitalRead(B_BUTTON_PIN);
 
+  setupLCD();
   logStart();
 }
 
 void loop()
 {
+  // Check if feedback display time has elapsed
+  updateFeedback();
+
   if (millis() - lastDebounce > DEBOUNCE_DELAY_MS)
   {
     lastDebounce = millis();
@@ -47,6 +52,7 @@ void loop()
 
     logButtonStates(aButtonState == LOW, bButtonState == LOW);
 
+    int prevIndex = currentCodeIndex;
     handleButtonPress(aPressedEdge, bPressedEdge);
 
     previousAButtonState = aButtonState;
@@ -54,7 +60,14 @@ void loop()
 
     logInsertedCode(currentCode, currentCodeIndex);
 
-    verifyCode();
+    if (currentCodeIndex == codeLength)
+    {
+      verifyCode();
+    }
+    else if (currentCodeIndex != prevIndex)
+    {
+      updateLCD(currentCode, currentCodeIndex);
+    }
   }
 }
 
@@ -63,6 +76,7 @@ void handleButtonPress(int aPressedEdge, int bPressedEdge)
   if (aPressedEdge && bPressedEdge)
   {
     logBothButtonsPressed();
+    showDoublePress();
   }
   else if (aPressedEdge)
   {
@@ -97,13 +111,13 @@ void verifyCode()
   if (codeCorrect)
   {
     digitalWrite(RED_PIN, LOW);
-
+    startFeedback(true);
     blinkLED(GREEN_PIN, 3, 200); // Blink green LED 3 times with 200ms delay
   }
   else
   {
     digitalWrite(GREEN_PIN, LOW);
-
+    startFeedback(false);
     blinkLED(RED_PIN, 3, 200); // Blink red LED 3 times with 200ms delay
   }
 
