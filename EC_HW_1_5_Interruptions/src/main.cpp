@@ -1,31 +1,32 @@
 #include <Arduino.h>
 
-#define BUTTON_EXTERNAL 17
+#define BUTTON_IN 16
 
-volatile uint16_t counter = 0;
-volatile bool pressed = false;
+volatile uint32_t button_counter = 0;
 
-void IRAM_ATTR reaction_left()
+uint32_t last_count = 0;
+
+void IRAM_ATTR button_isr()
 {
-  counter++;      // короткий ISR — без Serial/String усередині переривання
-  pressed = true; // лише прапорець; увесь друк робимо в loop()
+  button_counter++;
 }
 
 void setup()
 {
-  pinMode(BUTTON_EXTERNAL, INPUT); // ТЕСТ: внутрішня підтяжка ~45 кОм
+  pinMode(BUTTON_IN, INPUT_PULLUP);
   Serial.begin(115200);
-  delay(200);
-  Serial.println("Press the button to see the count...");
-  attachInterrupt(digitalPinToInterrupt(BUTTON_EXTERNAL), reaction_left, FALLING);
+
+  attachInterrupt(digitalPinToInterrupt(BUTTON_IN), button_isr, FALLING);
 }
 
 void loop()
 {
-
-  if (pressed)
+  if (button_counter != last_count)
   {
-    pressed = false;
-    Serial.println("Button Pressed! Count: " + String(counter)); // друк тут — безпечно
+    last_count = button_counter;
+    Serial.print("Button Pressed! Count: ");
+    Serial.println(last_count);
   }
+
+  delay(10);
 }
