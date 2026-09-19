@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdbool.h>
+#include "app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -87,8 +87,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  uint32_t last_btn_clicked = HAL_GetTick();
-  bool btn_clicked = false;
+  setup();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -98,20 +97,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  uint32_t now = HAL_GetTick();
-
-	  if (now - last_btn_clicked >= DEBOUNCE_MS){
-		  if (HAL_GPIO_ReadPin(Button_GPIO_Port, Button_Pin) == 0)
-		  {
-			  btn_clicked = true;
-			  last_btn_clicked = HAL_GetTick();
-		  }
-		  else if (btn_clicked == true)
-		  {
-			  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-			  btn_clicked = false;
-		  }
-	  }
+	  loop();
 
   }
   /* USER CODE END 3 */
