@@ -20,8 +20,9 @@
 #define SERVO_MIN_US 400
 #define SERVO_MAX_US 2600
 
-#define POT_MIN_US 400
-#define POT_MAX_US 2600
+#define SERVO_RANGE_DEG 180.0f
+#define POT_TRAVEL_DEG 270.0f
+#define POT_WINDOW_START_DEG ((POT_TRAVEL_DEG - SERVO_RANGE_DEG) / 2.0f)
 
 static void servo_init(void)
 {
@@ -82,7 +83,6 @@ static void servo_set_angle(float deg)
     if (deg < 0.0f)
         deg = 0.0f;
     uint32_t us = SERVO_MIN_US + (uint32_t)((deg / 180.0f) * (SERVO_MAX_US - SERVO_MIN_US));
-    ESP_LOGI("check", " us = %d", us);
 
     servo_set_us(us);
 }
@@ -97,17 +97,31 @@ void app_main(void)
 
     pot_init();
 
+    int last_logged = -1;
+
     while (1)
     {
         int raw = 0;
 
         adc_oneshot_read(adc1, POT_CHANNEL, &raw);
 
-        uint32_t us = POT_MIN_US + ((uint32_t)raw * (POT_MAX_US - POT_MIN_US) / 4095);
+        float pot_deg = raw * POT_TRAVEL_DEG / 4095.0f;
+        float servo_deg = pot_deg - POT_WINDOW_START_DEG;
+        if (servo_deg < 0.0f)
+            servo_deg = 0.0f;
+        if (servo_deg > SERVO_RANGE_DEG)
+            servo_deg = SERVO_RANGE_DEG;
 
-        ESP_LOGI("check", " us = %d", us);
-        servo_set_us(us);
+        servo_set_angle(servo_deg);
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        int pot_angle = (int)(pot_deg + 0.5f);
+        if (pot_angle != last_logged)
+        {
+            ESP_LOGI("pot", "from left = %3d deg | from right = %3d deg | servo = %3d deg",
+                     pot_angle, (int)POT_TRAVEL_DEG - pot_angle, (int)(servo_deg + 0.5f));
+            last_logged = pot_angle;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
