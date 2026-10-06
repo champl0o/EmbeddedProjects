@@ -4,6 +4,7 @@
 #include "driver/gpio.h"
 #include "driver/pulse_cnt.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "safe.h"
 
 #define ENC_A GPIO_NUM_9
@@ -85,49 +86,6 @@ static void encoder_init(void)
              ENC_A, ENC_B, ENC_SW, STEPS_PER_REV);
 }
 
-void on_tick(int tick_dir)
-{
-    if (current_state != ENTER)
-        return;
-
-    if (dir == 0)
-    {
-        dir = tick_dir;
-        digit = 0;
-        printf("Напрямок встановлено: %d\n", dir);
-        fflush(stdout);
-        printf("Цифра скинута: %d\n", digit);
-        fflush(stdout);
-
-        return;
-    }
-    if (tick_dir == dir)
-    {
-        digit = (digit + 1) % 10;
-        printf("Цифра оновлена: %d\n", digit);
-        fflush(stdout);
-        dir = tick_dir;
-
-        return;
-    }
-
-    if (tick_dir != dir)
-    {
-        entered[pos++] = digit;
-
-        if (pos == CODE_LEN)
-        {
-            check_code();
-            return;
-        }
-        // pos = (pos + 1) % CODE_LEN; // This line is no longer needed as pos is incremented above
-        digit = 0;
-        printf("Цифра введена: %d\n", entered[pos]);
-        printf("Цифра скинута: %d\n", digit);
-        fflush(stdout);
-    }
-}
-
 static void poll_encoder(void)
 {
     static int last_count = 0;
@@ -165,11 +123,6 @@ static void poll_button(void)
         on_button();
     }
     last_state = now;
-}
-
-static void on_button(void)
-{
-    reset_code();
 }
 
 #endif // ENCODER_H
